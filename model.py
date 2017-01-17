@@ -55,13 +55,41 @@ class Model(object):
       self.dec_seq_length += 1 # terminal symbol
 
     self._build_model()
-    if is_critic:
-      self._build_critic_model()
+    self._build_steps()
 
     if not reuse:
       self._build_optim()
 
-    self.summary = tf.summary.merge_all()
+    self.train_summary = tf.summary.merge([
+        tf.summary.scalar("train/total_loss", self.total_loss),
+    ])
+
+    self.test_summary = tf.summary.merge([
+        tf.summary.scalar("test/total_loss", self.total_loss),
+    ])
+
+  def _build_steps(self):
+    def run(sess, fetch, feed_dict, summary_writer, summary):
+      fetch['step'] = self.global_step
+      if summary is not None:
+        fetch['summary'] = summary
+
+      result = sess.run(fetch)
+      if summary_writer is not None:
+        summary_writer.add_summary(result['summary'], result['step'])
+        summary_writer.flush()
+      return result
+
+    def train(sess, fetch, summary_writer):
+      return run(sess, fetch, feed_dict={},
+                 summary_writer=summary_writer, summary=self.train_summary)
+
+    def test(sess, fetch, summary_writer=None):
+      return run(sess, fetch, feed_dict={self.is_training: False},
+                 summary_writer=summary_writer, summary=self.test_summary)
+
+    self.train = train
+    self.test = test
 
   def _build_model(self):
     tf.logging.info("Create a model..")
@@ -117,26 +145,30 @@ class Model(object):
         cells = [self.dec_cell] * self.num_layers
         self.dec_cell = MultiRNNCell(cells)
 
-      self.dec_output_logits, self.dec_states, _ = decoder_rnn(
+      self.dec_pred_logits, _, _ = decoder_rnn(
           self.dec_cell, self.embeded_dec_inputs, 
           self.enc_outputs, self.enc_final_states,
           self.dec_seq_length, self.hidden_dim, self.num_glimpse,
           self.max_dec_length, batch_size, is_train=True,
           initializer=self.initializer)
-
-      self.dec_outputs = tf.argmax(self.dec_output_logits, axis=2, name="dec_outputs")
+      self.dec_pred_prob = tf.nn.softmax(
+          self.dec_pred_logits, 2, name="dec_pred_prob")
+      self.dec_pred = tf.argmax(
+          self.dec_pred_logits, 2, name="dec_pred")
 
     with tf.variable_scope("dencoder", reuse=True):
-      self.dec_outputs, _, self.predictions = decoder_rnn(
+      self.dec_inference_outputs, _, self.dec_inference = decoder_rnn(
           self.dec_cell, first_decoder_input,
           self.enc_outputs, self.enc_final_states,
           self.dec_seq_length, self.hidden_dim, self.num_glimpse,
           self.max_dec_length, batch_size, is_train=False,
           initializer=self.initializer)
+      self.dec_inference_prob = tf.nn.softmax(
+          self.dec_inference_outputs, 2, name="dec_inference_prob")
 
   def _build_optim(self):
     losses = tf.nn.sparse_softmax_cross_entropy_with_logits(
-        labels=self.dec_targets, logits=self.dec_output_logits)
+        labels=self.dec_targets, logits=self.dec_pred_logits)
 
     def apply_mask(op):
       length = tf.cast(op[:1], tf.int32)
@@ -148,9 +180,6 @@ class Model(object):
 
     tf.losses.add_loss(batch_loss)
     total_loss = tf.losses.get_total_loss()
-
-    tf.summary.scalar("losses/batch_loss", batch_loss)
-    tf.summary.scalar("losses/total_loss", total_loss)
 
     self.total_loss = total_loss
     self.target_cross_entropy_losses = losses

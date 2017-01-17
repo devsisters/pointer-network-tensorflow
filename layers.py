@@ -49,19 +49,22 @@ def decoder_rnn(cell, inputs,
     def decoder_fn_inference(
         time, cell_state, cell_input, cell_output, context_state):
       if context_state is None:
-        context_state = tf.TensorArray(tf.float32, size=maximum_length)
+        context_state = tf.zeros([batch_size,], dtype=tf.int32)
 
       if cell_output is None:
-        # invariant tha this is time == 0
+        # time == 0
         cell_state = enc_final_states
-        cell_input = inputs[:,0,:]
         done = tf.zeros([batch_size,], dtype=tf.bool)
       else:
         output_logit = output_fn(enc_outputs, cell_output, num_glimpse)
-        sampled_idx = tf.multinomial(output_logit, 1)
 
-        context_state.write(time, output_logit)
-        done = tf.squeeze(tf.equal(sampled_idx, end_of_sequence_id), -1)
+        sampled_idx = tf.squeeze(
+            tf.cast(tf.multinomial(output_logit, 1), tf.int32), -1)
+        done = tf.equal(sampled_idx, end_of_sequence_id)
+
+        cell_input = tf.stop_gradient(
+            tf.gather_nd(enc_outputs, index_matrix_to_pairs(sampled_idx)))
+        conext_state = tf.stack([context_state, sampled_idx], 0)
 
       done = tf.cond(tf.greater(time, maximum_length),
           lambda: tf.ones([batch_size,], dtype=tf.bool),
@@ -111,8 +114,10 @@ def trainable_initial_state(batch_size, state_size,
 def index_matrix_to_pairs(index_matrix):
   # [[3,1,2], [2,3,1]] -> [[[0, 3], [1, 1], [2, 2]], 
   #                        [[0, 2], [1, 3], [2, 1]]]
-  replicated_first_indices = tf.tile(
-      tf.expand_dims(tf.range(tf.shape(index_matrix)[0]), dim=1), 
-      [1, tf.shape(index_matrix)[1]])
-  return tf.stack([replicated_first_indices, index_matrix], axis=2)
-
+  replicated_first_indices = tf.range(tf.shape(index_matrix)[0])
+  rank = len(index_matrix.get_shape())
+  if rank == 2:
+    replicated_first_indices = tf.tile(
+        tf.expand_dims(replicated_first_indices, dim=1),
+        [1, tf.shape(index_matrix)[1]])
+  return tf.stack([replicated_first_indices, index_matrix], axis=rank)

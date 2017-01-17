@@ -48,6 +48,7 @@ train_arg.add_argument('--checkpoint_secs', type=int, default=300, help='')
 # Misc
 misc_arg = add_argument_group('Misc')
 misc_arg.add_argument('--log_step', type=int, default=20, help='')
+misc_arg.add_argument('--num_log_samples', type=int, default=2, help='')
 misc_arg.add_argument('--log_level', type=str, default='INFO', choices=['INFO', 'DEBUG', 'WARN'], help='')
 misc_arg.add_argument('--log_dir', type=str, default='logs')
 misc_arg.add_argument('--data_dir', type=str, default='data')

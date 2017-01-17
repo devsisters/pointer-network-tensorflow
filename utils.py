@@ -9,7 +9,7 @@ import tensorflow.contrib.slim as slim
 
 def prepare_dirs_and_logger(config):
   formatter = logging.Formatter(
-      "%(asctime)s:%(levelname)s:%(message)s")
+      "%(asctime)s:%(levelname)s::%(message)s")
   logger = logging.getLogger('tensorflow')
 
   for hdlr in logger.handlers:
@@ -22,7 +22,10 @@ def prepare_dirs_and_logger(config):
   logger.setLevel(tf.logging.INFO)
 
   if config.load_path:
-    config.model_name = "{}_{}".format(config.task, config.load_path)
+    if config.load_path.startswith(config.task):
+      config.model_name = config.load_path
+    else:
+      config.model_name = "{}_{}".format(config.task, config.load_path)
   else:
     config.model_name = "{}_{}".format(config.task, get_time())
 
