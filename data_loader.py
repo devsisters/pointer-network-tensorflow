@@ -72,6 +72,7 @@ class TSPDataLoader(object):
 
     self.is_train = config.is_train
     self.use_terminal_symbol = config.use_terminal_symbol
+    self.random_seed = config.random_seed
 
     self.data_num = {}
     self.data_num['train'] = config.train_num
@@ -108,11 +109,13 @@ class TSPDataLoader(object):
       min_after_dequeue = 1000
       capacity = min_after_dequeue + 3 * self.batch_size
 
-      self.queue_ops[name] = tf.FIFOQueue(
+      self.queue_ops[name] = tf.RandomShuffleQueue(
           capacity=capacity,
+          min_after_dequeue=min_after_dequeue,
           dtypes=[tf.float32, tf.int32],
           shapes=[[self.max_length, 2,], [self.max_length]],
-          name="fifo_{}".format(name))
+          seed=self.random_seed,
+          name="random_queue_{}".format(name))
       self.enqueue_ops[name] = \
           self.queue_ops[name].enqueue([self.input_ops[name], self.target_ops[name]])
 

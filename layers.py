@@ -13,7 +13,8 @@ def decoder_rnn(cell, inputs,
                 enc_outputs, enc_final_states,
                 seq_length, hidden_dim,
                 num_glimpse, batch_size, is_train,
-                end_of_sequence_id=0, initializer=None, max_length=None):
+                end_of_sequence_id=0, initializer=None,
+                max_length=None):
   with tf.variable_scope("decoder_rnn") as scope:
     def attention(ref, query, with_softmax, scope="attention"):
       with tf.variable_scope(scope):
@@ -55,6 +56,8 @@ def decoder_rnn(cell, inputs,
     if is_train:
       decoder_fn = simple_decoder_fn_train(enc_final_states)
     else:
+      maximum_length = tf.convert_to_tensor(max_length, tf.int32)
+
       def decoder_fn(time, cell_state, cell_input, cell_output, context_state):
         cell_output = output_fn(enc_outputs, cell_output, num_glimpse)
         if cell_state is None:
@@ -65,6 +68,10 @@ def decoder_rnn(cell, inputs,
           sampled_idx = tf.cast(tf.argmax(cell_output, 1), tf.int32)
           next_input = input_fn(sampled_idx)
           done = tf.equal(sampled_idx, end_of_sequence_id)
+
+        done = tf.cond(tf.greater(time, maximum_length),
+          lambda: tf.ones([batch_size,], dtype=tf.bool),
+          lambda: done)
         return (done, cell_state, next_input, cell_output, context_state)
 
     outputs, final_state, final_context_state = \

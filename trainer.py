@@ -98,10 +98,10 @@ class Trainer(object):
     for idx in range(self.num_log_samples):
       pred, true = result['pred'][idx], result['true'][idx]
       tf.logging.info("test x: {}".format(pred))
-      tf.logging.info("test y: {} ({})".format(true, np.equal(pred, true)))
+      tf.logging.info("test y: {} ({})".format(true, np.array_equal(pred, true)))
 
-      if summary_writer:
-        summary_writer.add_summary(result['summary'], result['step'])
+    if summary_writer:
+      summary_writer.add_summary(result['summary'], result['step'])
 
   def _inject_summary(self, tag, feed_dict, step):
     summaries = self.sess.run(self.summary_ops[tag], feed_dict)
