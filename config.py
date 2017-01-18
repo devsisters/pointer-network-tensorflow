@@ -14,7 +14,7 @@ def add_argument_group(name):
 
 # Network
 net_arg = add_argument_group('Network')
-net_arg.add_argument('--hidden_dim', type=int, default=128, help='')
+net_arg.add_argument('--hidden_dim', type=int, default=256, help='')
 net_arg.add_argument('--num_layers', type=int, default=1, help='')
 net_arg.add_argument('--input_dim', type=int, default=2, help='')
 net_arg.add_argument('--max_enc_length', type=int, default=None, help='')
@@ -42,7 +42,7 @@ train_arg.add_argument('--max_step', type=int, default=1000000, help='')
 train_arg.add_argument('--lr_start', type=float, default=0.001, help='')
 train_arg.add_argument('--lr_decay_step', type=int, default=5000, help='')
 train_arg.add_argument('--lr_decay_rate', type=float, default=0.96, help='')
-train_arg.add_argument('--max_grad_norm', type=float, default=1.0, help='')
+train_arg.add_argument('--max_grad_norm', type=float, default=2.0, help='')
 train_arg.add_argument('--checkpoint_secs', type=int, default=300, help='')
 
 # Misc
