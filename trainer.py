@@ -76,17 +76,17 @@ class Trainer(object):
 
       if result['step'] % self.log_step == 0:
         fetch = {
-            'test l': self.model.total_inference_loss,
-            'test x': self.model.dec_inference,
-            'test y': self.model.dec_targets,
+            'loss': self.model.total_inference_loss,
+            'x': self.model.dec_inference,
+            'y': self.model.dec_targets,
         }
         result = self.model.test(self.sess, fetch, self.summary_writer)
 
         tf.logging.info("")
         tf.logging.info("loss: {}".format(result['loss']))
         for idx in range(self.num_log_samples):
-          tf.logging.info("preds: {}".format(result['preds'][idx]))
-          tf.logging.info("targets: {}".format(result['targets'][idx]))
+          tf.logging.info("x: {}".format(result['x'][idx]))
+          tf.logging.info("y: {}".format(result['y'][idx]))
         self.summary_writer.add_summary(result['summary'], result['step'])
 
       summary_writer = self._get_summary_writer(result)

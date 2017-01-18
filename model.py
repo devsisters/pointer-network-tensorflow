@@ -161,11 +161,12 @@ class Model(object):
 
     with tf.variable_scope("dencoder", reuse=True):
       self.dec_inference_logits, _, _ = decoder_rnn(
-          self.dec_cell, None,
+          self.dec_cell, self.first_decoder_input,
           self.enc_outputs, self.enc_final_states,
           self.dec_seq_length, self.hidden_dim,
           self.num_glimpse, batch_size, is_train=False,
-          initializer=self.initializer, first_decoder_input=self.first_decoder_input)
+          initializer=self.initializer,
+          max_length=self.max_dec_length + int(self.use_terminal_symbol))
       self.dec_inference_prob = tf.nn.softmax(
           self.dec_inference_logits, 2, name="dec_inference_logits")
       self.dec_inference = tf.argmax(

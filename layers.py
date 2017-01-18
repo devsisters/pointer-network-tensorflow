@@ -13,8 +13,7 @@ def decoder_rnn(cell, inputs,
                 enc_outputs, enc_final_states,
                 seq_length, hidden_dim,
                 num_glimpse, batch_size, is_train,
-                end_of_sequence_id=0, initializer=None,
-                first_decoder_input=None):
+                end_of_sequence_id=0, initializer=None, max_length=None):
   with tf.variable_scope("decoder_rnn") as scope:
     def attention(ref, query, with_softmax, scope="attention"):
       with tf.variable_scope(scope):
@@ -43,7 +42,7 @@ def decoder_rnn(cell, inputs,
 
     def output_fn(ref, query, num_glimpse):
       if query is None:
-        return tf.zeros([11], tf.float32) # only used for shape inference
+        return tf.zeros([max_length], tf.float32) # only used for shape inference
       else:
         for idx in range(num_glimpse):
           query = glimpse(ref, query, "glimpse_{}".format(idx))
@@ -58,10 +57,9 @@ def decoder_rnn(cell, inputs,
     else:
       def decoder_fn(time, cell_state, cell_input, cell_output, context_state):
         cell_output = output_fn(enc_outputs, cell_output, num_glimpse)
-
         if cell_state is None:
           cell_state = enc_final_states
-          next_input = tf.squeeze(first_decoder_input, 1)
+          next_input = cell_input
           done = tf.zeros([batch_size,], dtype=tf.bool)
         else:
           sampled_idx = tf.cast(tf.argmax(cell_output, 1), tf.int32)
