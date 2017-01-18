@@ -18,10 +18,8 @@ TensorFlow implementation of [Pointer Networks](https://arxiv.org/abs/1506.03134
 
 To train a model:
 
-    $ python main.py --task=tsp20 --lr_start=0.001 --min_data_length=5 --max_data_length=20
-    $ python main.py --task=tsp50 --lr_start=0.001 --min_data_length=5 --max_data_length=50
-    $ python main.py --task=tsp100 --lr_start=0.0001 --min_data_length=5 --max_data_length=100
-
+    $ python main.py --task=tsp20 --min_length=5 --max_data_length=20 # download dataset from the paper
+    $ python main.py --task=tsp20 --min_length=5 --max_data_length=10 # generate dataset itself
 
 To train a model:
 

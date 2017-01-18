@@ -75,24 +75,33 @@ class Trainer(object):
       result = self.model.train(self.sess, fetch, summary_writer)
 
       if result['step'] % self.log_step == 0:
-        fetch = {
-            'loss': self.model.total_inference_loss,
-            'x': self.model.dec_inference,
-            'y': self.model.dec_targets,
-        }
-        result = self.model.test(self.sess, fetch, self.summary_writer)
-
-        tf.logging.info("")
-        tf.logging.info("test loss: {}".format(result['loss']))
-        for idx in range(self.num_log_samples):
-          tf.logging.info("test x: {}".format(result['x'][idx]))
-          tf.logging.info("test y: {}".format(result['y'][idx]))
-        self.summary_writer.add_summary(result['summary'], result['step'])
+        self._test(self.summary_writer)
 
       summary_writer = self._get_summary_writer(result)
 
   def test(self):
     tf.logging.info("Testing starts...")
+
+    for idx in range(10):
+      self._test(None)
+
+  def _test(self, summary_writer):
+    fetch = {
+        'loss': self.model.total_inference_loss,
+        'pred': self.model.dec_inference,
+        'true': self.model.dec_targets,
+    }
+    result = self.model.test(self.sess, fetch, summary_writer)
+
+    tf.logging.info("")
+    tf.logging.info("test loss: {}".format(result['loss']))
+    for idx in range(self.num_log_samples):
+      pred, true = result['pred'][idx], result['true'][idx]
+      tf.logging.info("test x: {}".format(pred))
+      tf.logging.info("test y: {} ({})".format(true, np.equal(pred, true)))
+
+      if summary_writer:
+        summary_writer.add_summary(result['summary'], result['step'])
 
   def _inject_summary(self, tag, feed_dict, step):
     summaries = self.sess.run(self.summary_ops[tag], feed_dict)

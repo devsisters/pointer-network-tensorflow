@@ -1,13 +1,26 @@
 # Most of the codes are from 
 # https://github.com/vshallc/PtrNets/blob/master/pointer/misc/tsp.py
 import os
+import re
+import zipfile
 import itertools
 import threading
 import numpy as np
-from tqdm import trange
+from tqdm import trange, tqdm
 from collections import namedtuple
 
 import tensorflow as tf
+from download import download_file_from_google_drive
+
+GOOGLE_DRIVE_IDS = {
+    'tsp5_train.zip': '0B2fg8yPGn2TCSW1pNTJMXzFPYTg',
+    'tsp10_train.zip': '0B2fg8yPGn2TCbHowM0hfOTJCNkU',
+    'tsp5-20_train.zip': '0B2fg8yPGn2TCTWNxX21jTDBGeXc',
+    'tsp50_train.zip': '0B2fg8yPGn2TCaVQxSl9ab29QajA',
+    'tsp20_test.txt': '0B2fg8yPGn2TCdF9TUU5DZVNCNjQ',
+    'tsp40_test.txt': '0B2fg8yPGn2TCcjFrYk85SGFVNlU',
+    'tsp50_test.txt.zip': '0B2fg8yPGn2TCUVlCQmQtelpZTTQ',
+}
 
 TSP = namedtuple('TSP', ['x', 'y', 'name'])
 
@@ -35,18 +48,24 @@ def generate_one_example(n_nodes, rng):
   solutions = solve_tsp_dynamic(nodes)
   return nodes, solutions
 
-def pad(x, max_length):
-  shape = x.shape
-  pad_length = max_length - shape[0]
-  shape[0] = pad_length
-  return np.concatenate([x, x.np.zeros(shape)])
+def read_paper_dataset(paths, max_length):
+  x, y = [], []
+  for path in paths:
+    tf.logging.info("Read dataset {} which is used in the paper..".format(path))
+    length = max(re.findall('\d+', path))
+    with open(path) as f:
+      for l in tqdm(f):
+        inputs, outputs = l.split(' output ')
+        x.append(np.array(inputs.split(), dtype=np.float32).reshape([-1, 2]))
+        y.append(np.array(outputs.split(), dtype=np.int32)[:-1]) # skip the last one
+  return x, y
 
 class TSPDataLoader(object):
   def __init__(self, config, rng=None):
     self.config = config
     self.rng = rng
 
-    self.task = config.task
+    self.task = config.task.lower()
     self.batch_size = config.batch_size
     self.min_length = config.min_data_length
     self.max_length = config.max_data_length
@@ -56,7 +75,6 @@ class TSPDataLoader(object):
 
     self.data_num = {}
     self.data_num['train'] = config.train_num
-    self.data_num['valid'] = config.valid_num
     self.data_num['test'] = config.test_num
 
     self.data_dir = config.data_dir
@@ -69,7 +87,13 @@ class TSPDataLoader(object):
     self.queue_ops, self.enqueue_ops = None, None
     self.x, self.y, self.seq_length, self.mask = None, None, None, None
 
-    self._maybe_generate_and_save()
+    paths = self.download_google_drive_file()
+    if len(paths) != 0:
+      self._maybe_generate_and_save(except_list=paths.keys())
+      for name, path in paths.items():
+        self.read_zip_and_update_data(path, name)
+    else:
+      self._maybe_generate_and_save()
     self._create_input_queue()
 
   def _create_input_queue(self, queue_capacity_factor=16):
@@ -133,10 +157,13 @@ class TSPDataLoader(object):
     self.coord.request_stop()
     self.coord.join(threads)
 
-  def _maybe_generate_and_save(self):
+  def _maybe_generate_and_save(self, except_list=[]):
     self.data = {}
 
     for name, num in self.data_num.items():
+      if name in except_list:
+        tf.logging.info("Skip creating {} because of given except_list {}".format(name, except_list))
+        continue
       path = self.get_path(name)
 
       if not os.path.exists(path):
@@ -144,11 +171,12 @@ class TSPDataLoader(object):
 
         x = np.zeros([num, self.max_length, 2], dtype=np.float32)
         y = np.zeros([num, self.max_length], dtype=np.int32)
-        for i in trange(num, desc="Create {} data".format(name)):
+
+        for idx in trange(num, desc="Create {} data".format(name)):
           n_nodes = self.rng.randint(self.min_length, self.max_length+ 1)
           nodes, res = generate_one_example(n_nodes, self.rng)
-          x[i,:len(nodes)] = nodes
-          y[i,:len(res)] = res
+          x[idx,:len(nodes)] = nodes
+          y[idx,:len(res)] = res
 
         np.savez(path, x=x, y=y)
         self.data[name] = TSP(x=x, y=y, name=name)
@@ -161,3 +189,50 @@ class TSPDataLoader(object):
     return os.path.join(
         self.data_dir, "{}_{}={}.npz".format(
             self.task_name, name, self.data_num[name]))
+
+  def download_google_drive_file(self):
+    paths = {}
+    for mode in ['train', 'test']:
+      candidates = []
+      candidates.append(
+          '{}{}_{}'.format(self.task, self.max_length, mode))
+      candidates.append(
+          '{}{}-{}_{}'.format(self.task, self.min_length, self.max_length, mode))
+
+      for key in candidates:
+        for search_key in GOOGLE_DRIVE_IDS.keys():
+          if search_key.startswith(key):
+            path = os.path.join(self.data_dir, search_key)
+            tf.logging.info("Download dataset of the paper to {}".format(path))
+
+            if not os.path.exists(path):
+              download_file_from_google_drive(GOOGLE_DRIVE_IDS[search_key], path)
+              if path.endswith('zip'):
+                with zipfile.ZipFile(path, 'r') as z:
+                  z.extractall(self.data_dir)
+            paths[mode] = path
+
+    tf.logging.info("Can't found dataset from the paper!")
+    return paths
+
+  def read_zip_and_update_data(self, path, name):
+    if path.endswith('zip'):
+      filenames = zipfile.ZipFile(path).namelist()
+      paths = [os.path.join(self.data_dir, filename) for filename in filenames]
+    else:
+      paths = [path]
+
+    x_list, y_list = read_paper_dataset(paths, self.max_length)
+
+    x = np.zeros([len(x_list), self.max_length, 2], dtype=np.float32)
+    y = np.zeros([len(y_list), self.max_length], dtype=np.int32)
+
+    for idx, (nodes, res) in enumerate(tqdm(zip(x_list, y_list))):
+      x[idx,:len(nodes)] = nodes
+      y[idx,:len(res)] = res
+
+    if self.data is None:
+      self.data = {}
+
+    tf.logging.info("Update [{}] data with {} used in the paper".format(name, path))
+    self.data[name] = TSP(x=x, y=y, name=name)
