@@ -62,6 +62,7 @@ class Model(object):
 
     self.train_summary = tf.summary.merge([
         tf.summary.scalar("train/total_loss", self.total_loss),
+        tf.summary.scalar("train/lr", self.lr),
     ])
 
     self.test_summary = tf.summary.merge([

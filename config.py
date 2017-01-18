@@ -26,7 +26,7 @@ net_arg.add_argument('--use_terminal_symbol', type=str2bool, default=True, help=
 
 # Data
 data_arg = add_argument_group('Data')
-data_arg.add_argument('--task', type=str, default='TSP')
+data_arg.add_argument('--task', type=str, default='tsp')
 data_arg.add_argument('--batch_size', type=int, default=128)
 data_arg.add_argument('--min_data_length', type=int, default=5)
 data_arg.add_argument('--max_data_length', type=int, default=10)

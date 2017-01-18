@@ -18,8 +18,8 @@ TensorFlow implementation of [Pointer Networks](https://arxiv.org/abs/1506.03134
 
 To train a model:
 
-    $ python main.py --task=tsp20 --min_length=5 --max_data_length=20 # download dataset from the paper
-    $ python main.py --task=tsp20 --min_length=5 --max_data_length=10 # generate dataset itself
+    $ python main.py --task=tsp --max_data_length=20 # download dataset from the paper
+    $ python main.py --task=tsp --max_data_length=10 # generate dataset itself
 
 To train a model:
 
@@ -31,6 +31,10 @@ To test a model:
     $ python main.py --is_train=False
 
 ## Results
+
+Train/Test loss of `max_data_length=10` after 40,000 steps:
+
+    $ python main.py --reg_scale=1.0 --optimizer=sgd
 
 (in progress)
 
