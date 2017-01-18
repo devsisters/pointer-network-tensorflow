@@ -35,6 +35,12 @@ def generate_one_example(n_nodes, rng):
   solutions = solve_tsp_dynamic(nodes)
   return nodes, solutions
 
+def pad(x, max_length):
+  shape = x.shape
+  pad_length = max_length - shape[0]
+  shape[0] = pad_length
+  return np.concatenate([x, x.np.zeros(shape)])
+
 class TSPDataLoader(object):
   def __init__(self, config, rng=None):
     self.config = config
@@ -78,10 +84,10 @@ class TSPDataLoader(object):
       min_after_dequeue = 1000
       capacity = min_after_dequeue + 3 * self.batch_size
 
-      self.queue_ops[name] = tf.PaddingFIFOQueue(
+      self.queue_ops[name] = tf.FIFOQueue(
           capacity=capacity,
           dtypes=[tf.float32, tf.int32],
-          shapes=[[None, 2,], [None]],
+          shapes=[[self.max_length, 2,], [self.max_length]],
           name="fifo_{}".format(name))
       self.enqueue_ops[name] = \
           self.queue_ops[name].enqueue([self.input_ops[name], self.target_ops[name]])
@@ -136,12 +142,13 @@ class TSPDataLoader(object):
       if not os.path.exists(path):
         tf.logging.info("Creating {} for [{}]".format(path, self.task))
 
-        x, y = [], []
+        x = np.zeros([num, self.max_length, 2], dtype=np.float32)
+        y = np.zeros([num, self.max_length], dtype=np.int32)
         for i in trange(num, desc="Create {} data".format(name)):
           n_nodes = self.rng.randint(self.min_length, self.max_length+ 1)
           nodes, res = generate_one_example(n_nodes, self.rng)
-          x.append(nodes)
-          y.append(res)
+          x[i,:len(nodes)] = nodes
+          y[i,:len(res)] = res
 
         np.savez(path, x=x, y=y)
         self.data[name] = TSP(x=x, y=y, name=name)

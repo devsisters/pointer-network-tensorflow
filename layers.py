@@ -11,9 +11,10 @@ simple_decoder_fn_train = seq2seq.simple_decoder_fn_train
 
 def decoder_rnn(cell, inputs,
                 enc_outputs, enc_final_states,
-                seq_length, hidden_dim, num_glimpse,
-                max_dec_length, batch_size, is_train,
-                end_of_sequence_id=0, initializer=None):
+                seq_length, hidden_dim,
+                num_glimpse, batch_size, is_train,
+                end_of_sequence_id=0, initializer=None,
+                first_decoder_input=None):
   with tf.variable_scope("decoder_rnn") as scope:
     def attention(ref, query, with_softmax, scope="attention"):
       with tf.variable_scope(scope):
@@ -41,40 +42,32 @@ def decoder_rnn(cell, inputs,
       return tf.reduce_sum(alignments * ref, [1])
 
     def output_fn(ref, query, num_glimpse):
-      for idx in range(num_glimpse):
-        query = glimpse(ref, query, "glimpse_{}".format(idx))
-      return attention(ref, query, with_softmax=False, scope="attention")
-
-    maximum_length = tf.convert_to_tensor(max_dec_length, tf.int32)
-    def decoder_fn_inference(
-        time, cell_state, cell_input, cell_output, context_state):
-      if context_state is None:
-        context_state = tf.zeros([batch_size,], dtype=tf.int32)
-
-      if cell_output is None:
-        # time == 0
-        cell_state = enc_final_states
-        done = tf.zeros([batch_size,], dtype=tf.bool)
+      if query is None:
+        return tf.zeros([11], tf.float32) # only used for shape inference
       else:
-        output_logit = output_fn(enc_outputs, cell_output, num_glimpse)
+        for idx in range(num_glimpse):
+          query = glimpse(ref, query, "glimpse_{}".format(idx))
+        return attention(ref, query, with_softmax=False, scope="attention")
 
-        sampled_idx = tf.squeeze(
-            tf.cast(tf.multinomial(output_logit, 1), tf.int32), -1)
-        done = tf.equal(sampled_idx, end_of_sequence_id)
-
-        cell_input = tf.stop_gradient(
-            tf.gather_nd(enc_outputs, index_matrix_to_pairs(sampled_idx)))
-        conext_state = tf.stack([context_state, sampled_idx], 0)
-
-      done = tf.cond(tf.greater(time, maximum_length),
-          lambda: tf.ones([batch_size,], dtype=tf.bool),
-          lambda: done)
-      return (done, cell_state, cell_input, cell_output, context_state)
+    def input_fn(sampled_idx):
+      return tf.stop_gradient(
+          tf.gather_nd(enc_outputs, index_matrix_to_pairs(sampled_idx)))
 
     if is_train:
       decoder_fn = simple_decoder_fn_train(enc_final_states)
     else:
-      decoder_fn = decoder_fn_inference
+      def decoder_fn(time, cell_state, cell_input, cell_output, context_state):
+        cell_output = output_fn(enc_outputs, cell_output, num_glimpse)
+
+        if cell_state is None:
+          cell_state = enc_final_states
+          next_input = tf.squeeze(first_decoder_input, 1)
+          done = tf.zeros([batch_size,], dtype=tf.bool)
+        else:
+          sampled_idx = tf.cast(tf.argmax(cell_output, 1), tf.int32)
+          next_input = input_fn(sampled_idx)
+          done = tf.equal(sampled_idx, end_of_sequence_id)
+        return (done, cell_state, next_input, cell_output, context_state)
 
     outputs, final_state, final_context_state = \
         dynamic_rnn_decoder(cell, decoder_fn, inputs=inputs,
