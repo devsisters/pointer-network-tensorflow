@@ -83,10 +83,10 @@ class Trainer(object):
         result = self.model.test(self.sess, fetch, self.summary_writer)
 
         tf.logging.info("")
-        tf.logging.info("loss: {}".format(result['loss']))
+        tf.logging.info("test loss: {}".format(result['loss']))
         for idx in range(self.num_log_samples):
-          tf.logging.info("x: {}".format(result['x'][idx]))
-          tf.logging.info("y: {}".format(result['y'][idx]))
+          tf.logging.info("test x: {}".format(result['x'][idx]))
+          tf.logging.info("test y: {}".format(result['y'][idx]))
         self.summary_writer.add_summary(result['summary'], result['step'])
 
       summary_writer = self._get_summary_writer(result)
