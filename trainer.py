@@ -97,8 +97,8 @@ class Trainer(object):
     tf.logging.info("test loss: {}".format(result['loss']))
     for idx in range(self.num_log_samples):
       pred, true = result['pred'][idx], result['true'][idx]
-      tf.logging.info("test x: {}".format(pred))
-      tf.logging.info("test y: {} ({})".format(true, np.array_equal(pred, true)))
+      tf.logging.info("test pred: {}".format(pred))
+      tf.logging.info("test true: {} ({})".format(true, np.array_equal(pred, true)))
 
     if summary_writer:
       summary_writer.add_summary(result['summary'], result['step'])
