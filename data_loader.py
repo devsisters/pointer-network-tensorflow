@@ -84,6 +84,7 @@ class TSPDataLoader(object):
 
     self.data = None
     self.coord = None
+    self.threads = None
     self.input_ops, self.target_ops = None, None
     self.queue_ops, self.enqueue_ops = None, None
     self.x, self.y, self.seq_length, self.mask = None, None, None, None
@@ -136,7 +137,7 @@ class TSPDataLoader(object):
               name="batch_and_pad")
 
   def run_input_queue(self, sess):
-    threads = []
+    self.threads = []
     self.coord = tf.train.Coordinator()
 
     for name in self.data_num.keys():
@@ -153,12 +154,13 @@ class TSPDataLoader(object):
       args = (sess, name, self.input_ops, self.target_ops, self.enqueue_ops, self.coord)
       t = threading.Thread(target=load_and_enqueue, args=args)
       t.start()
-      threads.append(t)
-      tf.logging.info("Thread start for [{}]".format(name))
+      self.threads.append(t)
+      tf.logging.info("Thread for [{}] start".format(name))
 
   def stop_input_queue(self):
     self.coord.request_stop()
-    self.coord.join(threads)
+    self.coord.join(self.threads)
+    tf.logging.info("All threads stopped")
 
   def _maybe_generate_and_save(self, except_list=[]):
     self.data = {}

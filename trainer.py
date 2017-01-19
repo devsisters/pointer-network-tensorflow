@@ -79,11 +79,16 @@ class Trainer(object):
 
       summary_writer = self._get_summary_writer(result)
 
+    self.data_loader.stop_input_queue()
+
   def test(self):
     tf.logging.info("Testing starts...")
+    self.data_loader.run_input_queue(self.sess)
 
     for idx in range(10):
       self._test(None)
+
+    self.data_loader.stop_input_queue()
 
   def _test(self, summary_writer):
     fetch = {
