@@ -47,7 +47,7 @@ Train/Test loss of `max_data_length=10` after 24,000 steps:
 
 ![model](./assets/max_data_length=10_step=24000.png)
 
-Train/Test loss of `max_data_length=20` after 40,000 steps:
+Train/Test loss of `max_data_length=20` after 16,000 steps:
 
     $ python main.py --task=tsp --max_data_length=20 --hidden_dim=512
     $ ...
@@ -60,7 +60,7 @@ Train/Test loss of `max_data_length=20` after 40,000 steps:
     $ 2017-01-18 17:30:44,742:INFO::test pred: [ 1  8 16 20 19 14 18  2  9 12 15 11  3 13  5  6  7  4 17 10  0]
     $ 2017-01-18 17:30:44,742:INFO::test true: [ 1  8 16 20 19 14 18  2  9 12 15 11  3 13  5  6  7  4 17 10  0] (True)
 
-![model](./assets/max_data_length=20_step=14000.png)
+![model](./assets/max_data_length=20_step=16000.png)
 
 
 ## Author
