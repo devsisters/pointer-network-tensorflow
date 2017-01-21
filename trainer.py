@@ -22,14 +22,10 @@ class Trainer(object):
     self.num_log_samples = config.num_log_samples
     self.checkpoint_secs = config.checkpoint_secs
 
-    self.summary_ops = {}
-
     if config.task.lower().startswith('tsp'):
       self.data_loader = TSPDataLoader(config, rng=self.rng)
     else:
       raise Exception("[!] Unknown task: {}".format(config.task))
-
-    self.models = {}
 
     self.model = Model(
         config,
@@ -107,15 +103,6 @@ class Trainer(object):
 
     if summary_writer:
       summary_writer.add_summary(result['summary'], result['step'])
-
-  def _inject_summary(self, tag, feed_dict, step):
-    summaries = self.sess.run(self.summary_ops[tag], feed_dict)
-    self.summary_writer.add_summary(summaries['summary'], step)
-
-    path = os.path.join(
-        self.config.sample_model_dir, "{}.png".format(step))
-    imwrite(path, img_tile(summaries['output'],
-            tile_shape=self.config.sample_image_grid)[:,:,0])
 
   def _get_summary_writer(self, result):
     if result['step'] % self.log_step == 0:
