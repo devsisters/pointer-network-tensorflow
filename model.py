@@ -121,10 +121,10 @@ class Model(object):
           self.enc_cell, self.embeded_enc_inputs,
           self.enc_seq_length, self.enc_init_state)
 
+      self.first_decoder_input = tf.expand_dims(trainable_initial_state(
+          batch_size, self.hidden_dim, name="first_decoder_input"), 1)
       if self.use_terminal_symbol:
         # 0 index indicates terminal
-        self.first_decoder_input = tf.expand_dims(trainable_initial_state(
-            batch_size, self.hidden_dim, name="first_decoder_input"), 1)
         self.enc_outputs = tf.concat_v2(
             [self.first_decoder_input, self.enc_outputs], axis=1)
 
