@@ -128,7 +128,7 @@ class Model(object):
         self.enc_outputs = concat_v2(
             [self.first_decoder_input, self.enc_outputs], axis=1)
 
-    with tf.variable_scope("dencoder"):
+    with tf.variable_scope("decoder"):
       self.idx_pairs = index_matrix_to_pairs(self.dec_targets)
       self.embeded_dec_inputs = tf.stop_gradient(
           tf.gather_nd(self.enc_outputs, self.idx_pairs))
@@ -160,7 +160,7 @@ class Model(object):
       self.dec_pred = tf.argmax(
           self.dec_pred_logits, 2, name="dec_pred")
 
-    with tf.variable_scope("dencoder", reuse=True):
+    with tf.variable_scope("decoder", reuse=True):
       self.dec_inference_logits, _, _ = decoder_rnn(
           self.dec_cell, self.first_decoder_input,
           self.enc_outputs, self.enc_final_states,
