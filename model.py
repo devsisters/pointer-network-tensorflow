@@ -43,7 +43,7 @@ class Model(object):
     )
 
     self.enc_inputs, self.dec_targets, self.enc_seq_length, self.dec_seq_length, self.mask = \
-        tf.contrib.layers.utils.smart_cond(
+        smart_cond(
             self.is_training,
             lambda: (inputs['train'], labels['train'], enc_seq_length['train'],
                      dec_seq_length['train'], mask['train']),
@@ -125,7 +125,7 @@ class Model(object):
           batch_size, self.hidden_dim, name="first_decoder_input"), 1)
       if self.use_terminal_symbol:
         # 0 index indicates terminal
-        self.enc_outputs = tf.concat_v2(
+        self.enc_outputs = concat_v2(
             [self.first_decoder_input, self.enc_outputs], axis=1)
 
     with tf.variable_scope("dencoder"):
@@ -136,9 +136,9 @@ class Model(object):
       if self.use_terminal_symbol:
         tiled_zero_idxs = tf.tile(tf.zeros(
             [1, 1], dtype=tf.int32), [batch_size, 1], name="tiled_zero_idxs")
-        self.dec_targets = tf.concat_v2([self.dec_targets, tiled_zero_idxs], axis=1)
+        self.dec_targets = concat_v2([self.dec_targets, tiled_zero_idxs], axis=1)
 
-      self.embeded_dec_inputs = tf.concat_v2(
+      self.embeded_dec_inputs = concat_v2(
           [self.first_decoder_input, self.embeded_dec_inputs], axis=1)
 
       self.dec_cell = LSTMCell(

@@ -4,10 +4,26 @@ from tensorflow.contrib import layers
 from tensorflow.contrib import seq2seq
 from tensorflow.python.util import nest
 
-LSTMCell = rnn.LSTMCell
-MultiRNNCell = rnn.MultiRNNCell
-dynamic_rnn_decoder = seq2seq.dynamic_rnn_decoder
-simple_decoder_fn_train = seq2seq.simple_decoder_fn_train
+try:
+  LSTMCell = rnn.LSTMCell
+  MultiRNNCell = rnn.MultiRNNCell
+  dynamic_rnn_decoder = seq2seq.dynamic_rnn_decoder
+  simple_decoder_fn_train = seq2seq.simple_decoder_fn_train
+except:
+  LSTMCell = tf.contrib.rnn.LSTMCell
+  MultiRNNCell = tf.contrib.rnn.MultiRNNCell
+  dynamic_rnn_decoder = tf.contrib.seq2seq.dynamic_rnn_decoder
+  simple_decoder_fn_train = tf.contrib.seq2seq.simple_decoder_fn_train
+
+try:
+  smart_cond = tf.contrib.layers.python.layers.utils.smart_cond
+except:
+  smart_cond = tf.contrib.layers.utils.smart_cond
+
+try:
+  concat_v2 = tf.python.ops.gen_array_ops._concat_v2
+except:
+  concat_v2 = tf.concat_v2
 
 def decoder_rnn(cell, inputs,
                 enc_outputs, enc_final_states,
