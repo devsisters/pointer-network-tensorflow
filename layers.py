@@ -5,6 +5,13 @@ from tensorflow.contrib import seq2seq
 from tensorflow.python.util import nest
 
 try:
+  from tensorflow.contrib.layers.python.layers import utils
+except:
+  from tensorflow.contrib.layers import utils
+
+smart_cond = utils.smart_cond
+
+try:
   LSTMCell = rnn.LSTMCell
   MultiRNNCell = rnn.MultiRNNCell
   dynamic_rnn_decoder = seq2seq.dynamic_rnn_decoder
@@ -16,12 +23,7 @@ except:
   simple_decoder_fn_train = tf.contrib.seq2seq.simple_decoder_fn_train
 
 try:
-  smart_cond = tf.contrib.layers.python.layers.utils.smart_cond
-except:
-  smart_cond = tf.contrib.layers.utils.smart_cond
-
-try:
-  concat_v2 = tf.python.ops.gen_array_ops._concat_v2
+  from tensorflow.python.ops.gen_array_ops import _concat_v2 as concat_v2
 except:
   concat_v2 = tf.concat_v2
 
